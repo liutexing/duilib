@@ -58,6 +58,10 @@ namespace DuiLib
 		SIZE szControlAvailable;
 		int iControlMaxWidth = 0;
 		int iControlMaxHeight = 0;
+
+    double cyFixedPrecent = 0.0; // add by texing
+    int nPrecentAdjustables = 0; // add by texing
+
 		for( int it1 = 0; it1 < m_items.GetSize(); it1++ ) {
 			CControlUI* pControl = static_cast<CControlUI*>(m_items[it1]);
 			if( !pControl->IsVisible() ) continue;
@@ -72,14 +76,25 @@ namespace DuiLib
 			if (szControlAvailable.cx > iControlMaxWidth) szControlAvailable.cx = iControlMaxWidth;
 			if (szControlAvailable.cy > iControlMaxHeight) szControlAvailable.cy = iControlMaxHeight;
 			SIZE sz = pControl->EstimateSize(szControlAvailable);
+
 			if( sz.cy == 0 ) {
 				nAdjustables++;
-			}
-			else {
+
+        // add by texing begin
+        if (pControl->GetPrecentHeight() == 0.0) {
+          nPrecentAdjustables++;
+        } 
+			  else {
+          cyFixedPrecent += pControl->GetPrecentHeight();
+        }
+        // add by texing end
+
+			} else {
 				if( sz.cy < pControl->GetMinHeight() ) sz.cy = pControl->GetMinHeight();
 				if( sz.cy > pControl->GetMaxHeight() ) sz.cy = pControl->GetMaxHeight();
 			}
-			cyFixed += sz.cy + pControl->GetPadding().top + pControl->GetPadding().bottom;
+
+      cyFixed += sz.cy + pControl->GetPadding().top + pControl->GetPadding().bottom;
 
 			sz.cx = MAX(sz.cx, 0);
 			if( sz.cx < pControl->GetMinWidth() ) sz.cx = pControl->GetMinWidth();
@@ -89,10 +104,22 @@ namespace DuiLib
 		}
 		cyFixed += (nEstimateNum - 1) * m_iChildPadding;
 
+    // add by texing begin
+    if (cyFixedPrecent > 1.0)
+    {
+      cyFixedPrecent = 1.0;
+    }
+    // add end.
+
+
 		// Place elements
 		int cyNeeded = 0;
 		int cyExpand = 0;
+    double cyExpandPrecent = 0.0; // add by texing
 		if( nAdjustables > 0 ) cyExpand = MAX(0, (szAvailable.cy - cyFixed) / nAdjustables);
+
+    if (nPrecentAdjustables > 0) cyExpandPrecent = MAX(0, (1 - cyFixedPrecent) / nPrecentAdjustables); // add by texing
+
 		// Position the elements
 		SIZE szRemaining = szAvailable;
 		int iPosY = rc.top;
@@ -128,7 +155,16 @@ namespace DuiLib
 			SIZE sz = pControl->EstimateSize(szControlAvailable);
 			if( sz.cy == 0 ) {
 				iAdjustable++;
-				sz.cy = cyExpand;
+        
+        // 增加百分比高度 modify by texing.
+        double cyPrecent = pControl->GetPrecentHeight();
+        if (cyPrecent == 0.0)
+          cyPrecent = cyExpandPrecent;
+				sz.cy = MAX(0, (szAvailable.cy - cyFixed) * cyPrecent);//cyExpand; 
+        // sz.cy = cyExpand; 
+        // modify by texing end.
+
+
 				// Distribute remaining to last element (usually round-off left-overs)
 				if( iAdjustable == nAdjustables ) {
 					sz.cy = MAX(0, szRemaining.cy - rcPadding.bottom - cyFixedRemaining);

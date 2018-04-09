@@ -58,6 +58,10 @@ namespace DuiLib
 		SIZE szControlAvailable;
 		int iControlMaxWidth = 0;
 		int iControlMaxHeight = 0;
+
+    double cxFixedPrecent = 0.0; // add by texing
+    int nPrecentAdjustables = 0; // add by texing
+
 		for( int it1 = 0; it1 < m_items.GetSize(); it1++ ) {
 			CControlUI* pControl = static_cast<CControlUI*>(m_items[it1]);
 			if( !pControl->IsVisible() ) continue;
@@ -71,21 +75,52 @@ namespace DuiLib
 			if (iControlMaxHeight <= 0) iControlMaxHeight = pControl->GetMaxHeight();
 			if (szControlAvailable.cx > iControlMaxWidth) szControlAvailable.cx = iControlMaxWidth;
 			if (szControlAvailable.cy > iControlMaxHeight) szControlAvailable.cy = iControlMaxHeight;
-			SIZE sz = { 0 };
-			if (pControl->GetFixedWidth() == 0) {
-				nAdjustables++;
-				sz.cy = pControl->GetFixedHeight();
-			}
-			else {
-				sz = pControl->EstimateSize(szControlAvailable);
-				if (sz.cx == 0) {
-					nAdjustables++;
-				}
-				else {
-					if (sz.cx < pControl->GetMinWidth()) sz.cx = pControl->GetMinWidth();
-					if (sz.cx > pControl->GetMaxWidth()) sz.cx = pControl->GetMaxWidth();
-				}
-			}
+			
+		  
+
+      SIZE sz = { 0 };
+      if (pControl->GetFixedWidth() == 0) {
+        nAdjustables++;
+        sz.cy = pControl->GetFixedHeight();
+
+        if (pControl->GetPrecentWidth() == 0.0) {
+          nPrecentAdjustables++;
+        } 
+        else {
+          cxFixedPrecent += pControl->GetPrecentWidth();
+        }
+      }
+      else {
+        sz = pControl->EstimateSize(szControlAvailable);
+        if (sz.cx == 0) {
+          nAdjustables++;
+        }
+        else {
+          if (sz.cx < pControl->GetMinWidth()) sz.cx = pControl->GetMinWidth();
+          if (sz.cx > pControl->GetMaxWidth()) sz.cx = pControl->GetMaxWidth();
+        }
+      }
+		  
+		  
+		 // SIZE sz = pControl->EstimateSize(szControlAvailable);
+
+			//if (sz.cx == 0) {
+			//	nAdjustables++;
+
+   //     // add by texing begin
+   //     if (pControl->GetPrecentWidth() == 0.0) {
+   //       nPrecentAdjustables++;
+   //     } 
+			//	else {
+   //       cxFixedPrecent += pControl->GetPrecentWidth();
+   //     }
+   //     // add by texing end
+			//}
+			//else {
+			//	if (sz.cx < pControl->GetMinWidth()) sz.cx = pControl->GetMinWidth();
+			//	if (sz.cx > pControl->GetMaxWidth()) sz.cx = pControl->GetMaxWidth();
+			//}
+
 
 			cxFixed += sz.cx + pControl->GetPadding().left + pControl->GetPadding().right;
 
@@ -97,10 +132,20 @@ namespace DuiLib
 		}
 		cxFixed += (nEstimateNum - 1) * m_iChildPadding;
 
+    // add by texing begin
+    if (cxFixedPrecent > 1.0)
+    {
+      cxFixedPrecent = 1.0;
+    }
+    // add end
+
 		// Place elements
 		int cxNeeded = 0;
 		int cxExpand = 0;
+    double cxExpandPrecent = 0.0; // add by texing
 		if( nAdjustables > 0 ) cxExpand = MAX(0, (szAvailable.cx - cxFixed) / nAdjustables);
+
+    if (nPrecentAdjustables > 0) cxExpandPrecent = MAX(0, (1 - cxFixedPrecent) / nPrecentAdjustables); // add by texing
 		// Position the elements
 		SIZE szRemaining = szAvailable;
 		int iPosX = rc.left;
@@ -135,7 +180,16 @@ namespace DuiLib
 			SIZE sz = pControl->EstimateSize(szControlAvailable);
 			if (pControl->GetFixedWidth() == 0 || sz.cx == 0) {
 				iAdjustable++;
-				sz.cx = cxExpand;
+
+        // 增加百分比宽度 modify by texing.
+        double cxPrecent = pControl->GetPrecentWidth();
+        if (cxPrecent == 0.0)
+          cxPrecent = cxExpandPrecent;
+        sz.cx = MAX(0, (szAvailable.cx - cxFixed) * cxPrecent);
+        //sz.cx = cxExpand;
+        // modify by texing end.
+
+				
 				// Distribute remaining to last element (usually round-off left-overs)
 				if( iAdjustable == nAdjustables ) {
 					sz.cx = MAX(0, szRemaining.cx - rcPadding.right - cxFixedRemaining);

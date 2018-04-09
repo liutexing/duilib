@@ -1,4 +1,6 @@
 ﻿#include "StdAfx.h"
+#include <string>
+#include "UIControl.h"
 
 namespace DuiLib {
 
@@ -17,6 +19,8 @@ m_bMouseEnabled(true),
 m_bKeyboardEnabled(true),
 m_bFloat(false),
 m_bSetPos(false),
+m_cxPrecent(0.0),  // add by texing.
+m_cyPrecent(0.0),  // add by texing.
 m_chShortcut('\0'),
 m_pTag(NULL),
 m_dwBackColor(0),
@@ -541,6 +545,26 @@ void CControlUI::SetMaxHeight(int cy)
     NeedParentUpdate();
 }
 
+void CControlUI::SetPrecentWidth(double cx)
+{
+  m_cxPrecent = cx;
+}
+
+double CControlUI::GetPrecentWidth()
+{
+  return m_cxPrecent;
+}
+
+void CControlUI::SetPrecentHeight(double cy)
+{
+  m_cyPrecent = cy;
+}
+
+double CControlUI::GetPrecentHeight()
+{
+  return m_cyPrecent;
+}
+
 CDuiString CControlUI::GetToolTip() const
 {
     return m_sToolTip;
@@ -974,8 +998,23 @@ void CControlUI::SetAttribute(LPCTSTR pstrName, LPCTSTR pstrValue)
         SetBorderRound(cxyRound);
     }
     else if( _tcscmp(pstrName, _T("bkimage")) == 0 ) SetBkImage(pstrValue);
-    else if( _tcscmp(pstrName, _T("width")) == 0 ) SetFixedWidth(_ttoi(pstrValue));
-    else if( _tcscmp(pstrName, _T("height")) == 0 ) SetFixedHeight(_ttoi(pstrValue));
+    else if (_tcscmp(pstrName, _T("width")) == 0) {
+      // 修改增加百分比宽度字段, modify by texing
+      const double w = std::stod(pstrValue);
+
+      if (w >= 1.0)
+        SetFixedWidth(w);
+      else
+        SetPrecentWidth(w);
+    }
+    else if (_tcscmp(pstrName, _T("height")) == 0) {
+      // 修改增加百分比高度字段, modify by texing
+      const double h = std::stod(pstrValue);
+      if (h >= 1.0)
+        SetFixedHeight(h);
+      else
+        SetPrecentHeight(h);
+    }
     else if( _tcscmp(pstrName, _T("minwidth")) == 0 ) SetMinWidth(_ttoi(pstrValue));
     else if( _tcscmp(pstrName, _T("minheight")) == 0 ) SetMinHeight(_ttoi(pstrValue));
     else if( _tcscmp(pstrName, _T("maxwidth")) == 0 ) SetMaxWidth(_ttoi(pstrValue));
@@ -1124,16 +1163,19 @@ void CControlUI::PaintText(HDC hDC)
 
 void CControlUI::PaintBorder(HDC hDC)
 {
-	if(m_rcBorderSize.left > 0 && (m_dwBorderColor != 0 || m_dwFocusBorderColor != 0)) {
+  // 修改当为bordersize属性为rect时,没有left其他均无效 by texing
+	if((m_rcBorderSize.left > 0 || m_rcBorderSize.top > 0 || m_rcBorderSize.right > 0 || m_rcBorderSize.bottom > 0) && m_dwBorderColor != 0 || m_dwFocusBorderColor != 0) {
 		if( m_cxyBorderRound.cx > 0 || m_cxyBorderRound.cy > 0 )//画圆角边框
 		{
-			if (IsFocused() && m_dwFocusBorderColor != 0)
-				CRenderEngine::DrawRoundRect(hDC, m_rcItem, m_rcBorderSize.left, m_cxyBorderRound.cx, m_cxyBorderRound.cy, GetAdjustColor(m_dwFocusBorderColor), m_nBorderStyle);
-			else
-				CRenderEngine::DrawRoundRect(hDC, m_rcItem, m_rcBorderSize.left, m_cxyBorderRound.cx, m_cxyBorderRound.cy, GetAdjustColor(m_dwBorderColor), m_nBorderStyle);
+      if (m_rcBorderSize.left > 0) {
+			  if (IsFocused() && m_dwFocusBorderColor != 0)
+				  CRenderEngine::DrawRoundRect(hDC, m_rcItem, m_rcBorderSize.left, m_cxyBorderRound.cx, m_cxyBorderRound.cy, GetAdjustColor(m_dwFocusBorderColor), m_nBorderStyle);
+			  else
+				  CRenderEngine::DrawRoundRect(hDC, m_rcItem, m_rcBorderSize.left, m_cxyBorderRound.cx, m_cxyBorderRound.cy, GetAdjustColor(m_dwBorderColor), m_nBorderStyle);
+      }
 		}
 		else {
-			if (m_rcBorderSize.right == m_rcBorderSize.left && m_rcBorderSize.top == m_rcBorderSize.left && m_rcBorderSize.bottom == m_rcBorderSize.left) {
+			if (m_rcBorderSize.left > 0 && m_rcBorderSize.right == m_rcBorderSize.left && m_rcBorderSize.top == m_rcBorderSize.left && m_rcBorderSize.bottom == m_rcBorderSize.left) {
 				if (IsFocused() && m_dwFocusBorderColor != 0)
 					CRenderEngine::DrawRect(hDC, m_rcItem, m_rcBorderSize.left, GetAdjustColor(m_dwFocusBorderColor), m_nBorderStyle);
 				else
@@ -1163,7 +1205,7 @@ void CControlUI::PaintBorder(HDC hDC)
 				}
 				if(m_rcBorderSize.right > 0) {
 					rcBorder		= m_rcItem;
-					rcBorder.left	= m_rcItem.right - m_rcBorderSize.right / 2;
+					rcBorder.left	= m_rcItem.right - 1 - m_rcBorderSize.right / 2;
                     rcBorder.right  = rcBorder.left;
 					if (IsFocused() && m_dwFocusBorderColor != 0)
 						CRenderEngine::DrawLine(hDC,rcBorder,m_rcBorderSize.right,GetAdjustColor(m_dwFocusBorderColor),m_nBorderStyle);
@@ -1172,7 +1214,7 @@ void CControlUI::PaintBorder(HDC hDC)
 				}
 				if(m_rcBorderSize.bottom > 0) {
 					rcBorder		= m_rcItem;
-					rcBorder.top	= m_rcItem.bottom - m_rcBorderSize.bottom / 2;
+					rcBorder.top	= m_rcItem.bottom - 1 - m_rcBorderSize.bottom / 2;
                     rcBorder.bottom = rcBorder.top;
                     rcBorder.left  += m_rcBorderSize.left;
                     rcBorder.right -= m_rcBorderSize.right;

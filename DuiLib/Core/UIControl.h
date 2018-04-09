@@ -94,6 +94,11 @@ public:
     virtual int GetMaxHeight() const;
     virtual void SetMaxHeight(int cy);
 
+    virtual void SetPrecentWidth(double cx);
+    virtual double GetPrecentWidth();
+    virtual void SetPrecentHeight(double cy);
+    virtual double GetPrecentHeight();
+
     // 鼠标提示
     virtual CDuiString GetToolTip() const;
     virtual void SetToolTip(LPCTSTR pstrText);
@@ -203,6 +208,9 @@ protected:
     bool m_bFloat;
 	TPercentInfo m_piFloatPercent;
     bool m_bSetPos; // 防止SetPos循环调用
+
+    double m_cxPrecent; // 修改变更赠机百分比宽度和高度 add by texing
+    double m_cyPrecent; // 修改变更赠机百分比宽度和高度 add by texing
 
     CDuiString m_sText;
     CDuiString m_sToolTip;
